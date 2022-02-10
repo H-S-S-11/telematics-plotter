@@ -43,7 +43,9 @@ def journey_line(journey):
 
 def speeding(journey, mode='average', tolerance=0):
     if mode=='average':
-        return journey[journey['Horizontal Speed'] > (journey['Road Speed Limit'] + tolerance)]
+        journey['average_speed'] = journey['Delta Trip Distance']/journey['Time Elapsed']
+        # The above is in (100 m/s), multiply by 360 to get kph
+        return journey[journey['average_speed']*360 > (journey['Road Speed Limit'] + tolerance)]
     elif mode=='peak':
         return journey[journey['Delta Max Speed'] > (journey['Road Speed Limit'] + tolerance)]
 
