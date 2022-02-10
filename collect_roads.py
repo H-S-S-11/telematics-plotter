@@ -24,10 +24,11 @@ def reference_points():
      'Longitude': [-1.371054, -0.759332]})
     return gpd.GeoDataFrame(ref, geometry=gpd.points_from_xy(ref.Longitude, ref.Latitude))
 
-def read_road(file, b_roads=True):
+def read_road(file, b_roads=True, small_roads=False):
     cols_to_drop = ['fictitious', 'identifier', 'name1', 'name1_lang', 'name2', 'name2_lang', 'numberTOID', 'nameTOID', 'startNode', 'endNode', 'loop', 'structure', 'primary', 'trunkRoad']
     road = road = gpd.read_file(file).drop(cols_to_drop, axis=1)
-    road = road[(road['class']!='Unclassified') & (road['class']!='Unknown') & (road['class']!='Classified Unnumbered') & (road['class']!='Not Classified')]
+    if not small_roads:
+        road = road[(road['class']!='Unclassified') & (road['class']!='Unknown') & (road['class']!='Classified Unnumbered') & (road['class']!='Not Classified')]
     if not b_roads:
         road = road[(road['class']!='B Road')]
     return road
@@ -43,10 +44,18 @@ def all_links(dir):
 def road_transform(road_segment, xscale, yscale, xoff, yoff):
     return aff.translate(aff.scale(road_segment, xfact=xscale, yfact=yscale, origin=(0,0,0)), xoff=xoff, yoff=yoff)
 
-def get_roads(tile, folder, b_roads=True):
-    road = read_road(folder+tile+'_RoadLink.shp', b_roads=b_roads)
+def get_roads(tile, folder, b_roads=True, small_roads=False):
+    road = read_road(folder+tile+'_RoadLink.shp', b_roads=b_roads, small_roads=small_roads)
     road['geometry'] = road['geometry'].apply(road_transform, args=tile_transformations[tile])
     return road
+
+def plot_roads(ax, road, b_roads=False, small_roads=False):
+    road[road['class']=='Motorway'].plot(ax=ax, color='blue')
+    road[road['class']=='A Road'  ].plot(ax=ax, color='green')
+    if b_roads:
+        road[road['class']=='B Road'  ].plot(ax=ax, color='dimgrey')
+    if small_roads:
+        road[(road['class']!='Motorway') & (road['class']!='A Road') & (road['class']!='B Road')].plot(ax=ax, color='darkgrey')
 
 if __name__=="__main__":
     
@@ -57,6 +66,7 @@ if __name__=="__main__":
     road = get_roads('SU', 'OSopenRoads/data/', b_roads=False)
     gref = reference_points()
     gref.plot(ax=ax, color='red')
-    road[road['class']=='Motorway'].plot(ax=ax, color='blue')
-    road[road['class']=='A Road'  ].plot(ax=ax, color='green')
-    road[road['class']=='B Road'  ].plot(ax=ax, color='grey')
+    plot_roads(ax, road, b_roads=False, small_roads=False)
+    # road[road['class']=='Motorway'].plot(ax=ax, color='blue')
+    # road[road['class']=='A Road'  ].plot(ax=ax, color='green')
+    # road[road['class']=='B Road'  ].plot(ax=ax, color='grey')
