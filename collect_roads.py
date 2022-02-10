@@ -7,6 +7,15 @@ tile_transformations = {
     'SU' : (1.447080e-5, 0.887500e-5, -7.800128, 49.912384),
 }
 
+def download_roads():
+    import requests
+    url = "https://api.os.uk/downloads/v1/products/OpenRoads/downloads?area=GB&format=ESRI%C2%AE+Shapefile&redirect"
+    r = requests.get(url, allow_redirects=True)
+    open('OSopenRoads.zip', 'wb').write(r.content)
+    import zipfile
+    with zipfile.ZipFile('OSopenRoads.zip', 'r') as zip:
+        zip.extractall('OSopenRoads')
+
 def reference_points():
     # Use these to work out suitable tile transformations
     ref = pd.DataFrame(
@@ -45,7 +54,7 @@ if __name__=="__main__":
     uk = world[world.name == 'United Kingdom']
     ax = uk.plot(color='white', edgecolor='black')
 
-    road = get_roads('SU', '../oproad_essh_gb/data/', b_roads=False)
+    road = get_roads('SU', 'OSopenRoads/data/', b_roads=False)
     gref = reference_points()
     gref.plot(ax=ax, color='red')
     road[road['class']=='Motorway'].plot(ax=ax, color='blue')
