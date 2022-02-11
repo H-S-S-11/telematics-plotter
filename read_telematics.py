@@ -1,7 +1,10 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import geopandas as gpd
 from shapely import geometry
+
+from collect_roads import plot_roads
 
 def list_journeys(file):
     tel = pd.read_csv(file)
@@ -41,11 +44,16 @@ def journey_line(journey):
     df = pd.DataFrame({'line' : [line]})
     return gpd.GeoDataFrame(df, geometry=df.line)
 
+def average_speed(journey):
+    journey = journey[journey['Journey Segment Type']=='t']
+    # Multiply (100 m/s) by 360 to get kph
+    journey['average_speed'] = (journey['Delta Trip Distance']/journey['Time Elapsed'])*360
+    return journey
+
 def speeding(journey, mode='average', tolerance=0):
     if mode=='average':
-        journey['average_speed'] = journey['Delta Trip Distance']/journey['Time Elapsed']
-        # The above is in (100 m/s), multiply by 360 to get kph
-        return journey[journey['average_speed']*360 > (journey['Road Speed Limit'] + tolerance)]
+        journey=average_speed(journey)
+        return journey[journey['average_speed'] > (journey['Road Speed Limit'] + tolerance)]
     elif mode=='peak':
         return journey[journey['Delta Max Speed'] > (journey['Road Speed Limit'] + tolerance)]
 
@@ -55,5 +63,23 @@ def harsh_braking(journey, threshold=8):
         names.append(f'Delta Decelerations {n}')
     journey['harsh braking'] = journey.loc[:, names].sum(axis=1)
     return journey[journey['harsh braking'] != 0]
+
+def plot_journey(journey, mode='2d', roads=True, b_roads=True, small_roads=False, uk=None, road=None):
+    if mode=='2d':
+            ax = uk.plot(color='white', edgecolor='black')
+            if roads:
+                plot_roads(ax, road, b_roads=b_roads, small_roads=small_roads)
+            journey_line(journey).plot(ax=ax, color='purple')
+            speeding(journey, mode='peak',    tolerance=0).plot(ax=ax, color='yellow')
+            speeding(journey, mode='average', tolerance=0).plot(ax=ax, color='orange')
+            harsh_braking(journey, threshold=8).plot(ax=ax, color='red')
+    elif mode=='average_speed':
+        journey = average_speed(journey)
+        plt.figure()
+        plt.plot(journey['Accumulated Trip Run Time']/60, journey['average_speed']*0.621371, label='Average speed')
+        plt.plot(journey['Accumulated Trip Run Time']/60, journey['Road Speed Limit']*0.621371, label='Road speed limit')
+        plt.xlabel('Time elapsed in journey (minutes)')
+        plt.ylabel('Speed (mph)')
+        plt.legend()
 
 # At some point make a prepare_telematics function to delete leading lines

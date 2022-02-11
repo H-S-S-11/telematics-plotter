@@ -8,17 +8,19 @@ from read_telematics import *
 
 roads = False
 b_roads = True
-small_roads = True
+small_roads = False
 telematics_file = 'example_telematics.csv'
+mode = 'average_speed'
 # Roughly corresponds to minutes
 min_journey = 5
 
 world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 uk = world[world.name == 'United Kingdom']
 
+road = None
 if roads:
     # OS road data uses British National Grid coordinates https://britishnationalgrid.uk
-    road = get_roads('SU', '../oproad_essh_gb/data/', b_roads=b_roads, small_roads=small_roads)
+    road = get_roads('SU', 'OSopenRoads/data/', b_roads=b_roads, small_roads=small_roads)
 
 journeys = list_journeys('example_telematics.csv')
 
@@ -29,13 +31,8 @@ for journey in journeys:
         # Times are hours in 24hr clock
         journey_name = journey_title(journey, late_threshold=19, early_threshold=6)
 
-        ax = uk.plot(color='white', edgecolor='black')
-        if roads:
-            plot_roads(ax, road, b_roads=b_roads, small_roads=small_roads)
-        journey_line(journey).plot(ax=ax, color='purple')
-        speeding(journey, mode='peak',    tolerance=0).plot(ax=ax, color='yellow')
-        speeding(journey, mode='average', tolerance=0).plot(ax=ax, color='orange')
-        harsh_braking(journey, threshold=8).plot(ax=ax, color='red')
+        plot_journey(journey, mode=mode, uk=uk, road=road,
+            roads=roads, b_roads=b_roads, small_roads=small_roads)
         plt.title(journey_name)
 
 plt.show()
