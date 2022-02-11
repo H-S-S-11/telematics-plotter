@@ -24,7 +24,7 @@ if roads:
 
 journeys = list_journeys('example_telematics.csv')
 
-# 3D plot with average speed?
+# 3D plot with average speed? (Linestring Z)
 for journey in journeys:
     if len(journey.index) > min_journey:
         # Journey flagged as possibly late if it ends after late_threshold or before early_threshold

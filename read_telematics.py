@@ -64,6 +64,24 @@ def harsh_braking(journey, threshold=8):
     journey['harsh braking'] = journey.loc[:, names].sum(axis=1)
     return journey[journey['harsh braking'] != 0]
 
+def max_accel_decel(journey, type='brake'):
+    peaks = pd.DataFrame(columns=['runtime', f'max_{type}'])
+    t = 'Accelerations'
+    if type=='brake':
+        t = 'Decelerations'
+    for n in range(10, 0, -1):
+        filtered = journey[journey[f'Delta {t} {n}']>0]
+        journey = journey[journey[f'Delta {t} {n}']==0]
+        peak  = pd.DataFrame(columns=['runtime', f'max_{type}'])
+        peak['runtime'] = filtered['Accumulated Trip Run Time']
+        peak[f'max_{type}'] = n
+        peaks = pd.concat([peaks, peak])
+    zero = pd.DataFrame(columns=['runtime', f'max_{type}'])
+    zero['runtime'] = journey['Accumulated Trip Run Time']
+    zero[f'max_{type}'] = 0
+    peaks = pd.concat([peaks, zero])
+    return peaks.sort_values('runtime')
+
 def plot_journey(journey, mode='2d', roads=True, b_roads=True, small_roads=False, uk=None, road=None):
     if mode=='2d':
             ax = uk.plot(color='white', edgecolor='black')
@@ -77,7 +95,12 @@ def plot_journey(journey, mode='2d', roads=True, b_roads=True, small_roads=False
         journey = average_speed(journey)
         plt.figure()
         plt.plot(journey['Accumulated Trip Run Time']/60, journey['average_speed']*0.621371, label='Average speed')
+        plt.plot(journey['Accumulated Trip Run Time']/60, journey['Delta Max Speed']*0.621371, label='Max speed')
         plt.plot(journey['Accumulated Trip Run Time']/60, journey['Road Speed Limit']*0.621371, label='Road speed limit')
+        braking = max_accel_decel(journey, type='brake')
+        accel   = max_accel_decel(journey, type='accel')
+        plt.plot(braking['runtime']/60, braking['max_brake'], label='Max braking level')
+        plt.plot(accel['runtime']/60  , accel['max_accel']  , label='Max acceleration level')
         plt.xlabel('Time elapsed in journey (minutes)')
         plt.ylabel('Speed (mph)')
         plt.legend()
